@@ -2,6 +2,6 @@ package com.sample.endpoint;
 
 public interface EndointService {
 	
-	boolean uploadFiletoServer();
+	boolean uploadFiletoServer(String filePath,String fileName);
 
 }

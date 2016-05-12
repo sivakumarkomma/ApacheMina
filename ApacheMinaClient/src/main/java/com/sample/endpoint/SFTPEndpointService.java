@@ -1,7 +1,11 @@
 package com.sample.endpoint;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 import javax.inject.Singleton;
 
@@ -16,19 +20,32 @@ import com.jcraft.jsch.SftpException;
 public class SFTPEndpointService implements EndointService {
 
 	@Override
-	public boolean uploadFiletoServer() {
-		String filePth = "C://bps-logs//bps.log";
-		String fileName = "bps.log";
-		JSch jsch = new JSch();
-		String user = "user";
-		String password = "password";
-		String host = "192.168.0.172";
-		int port = 22;
-		Session session;
-		try {
-			session = jsch.getSession(user, host, port);
+	public boolean uploadFiletoServer(String filePath, String fileName) {
+		String srcFullFilePath = filePath + File.separator + fileName;
+		String desFileName = fileName;
 
-			session.setPassword(password);
+		Properties prop = new Properties();
+		InputStream input = null;
+
+		try {
+
+			input = SFTPEndpointService.class.getClassLoader().getResourceAsStream(
+					"config.properties");
+
+			// load a properties file
+			prop.load(input);
+
+			String userName = prop.getProperty("username");
+			String pwd = prop.getProperty("password");
+			int port = Integer.parseInt(prop.getProperty("port"));
+			String host = prop.getProperty("host");
+			JSch jsch = new JSch();
+
+			Session session;
+
+			session = jsch.getSession(userName, host, port);
+
+			session.setPassword(pwd);
 			java.util.Properties config = new java.util.Properties();
 			config.put("StrictHostKeyChecking", "no");
 			session.setConfig(config);
@@ -36,21 +53,34 @@ public class SFTPEndpointService implements EndointService {
 			Channel channel = session.openChannel("sftp");
 			channel.connect();
 			ChannelSftp channelSftp = (ChannelSftp) channel;
-			FileInputStream fi = new FileInputStream(filePth);
-			channelSftp.put(fi, fileName, 0);
+			FileInputStream fi = new FileInputStream(srcFullFilePath);
+			channelSftp.put(fi, desFileName, 0);
 			channelSftp.disconnect();
 			channel.disconnect();
 			session.disconnect();
 			return true;
 		} catch (JSchException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return false;
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
+			return false;
 		} catch (SftpException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return false;
+		} catch (IOException ex) {
+			ex.printStackTrace();
+			return false;
+		} finally {
+			if (input != null) {
+				try {
+					input.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
-		return false;
+		
+
 	}
 }

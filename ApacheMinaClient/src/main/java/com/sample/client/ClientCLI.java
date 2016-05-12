@@ -1,5 +1,9 @@
 package com.sample.client;
 
+import java.io.File;
+import java.io.InputStreamReader;
+import java.util.Scanner;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.sample.endpoint.EndointService;
@@ -12,29 +16,61 @@ public class ClientCLI {
 	
 	public static void main(String args[])
 	{
-		Injector injector = Guice.createInjector(new FileUtilInjector()); 
-		FileUtilService app = injector.getInstance(FileUtilService.class);
+		
+		Scanner scanner = new Scanner(new InputStreamReader(System.in));
+        System.out.println("Java SFTP Client ");
+        System.out.println("Please enter transfer file details ");
+        System.out.println("File Name : ");
+        String fileName = scanner.nextLine();
+        System.out.println("File Path :");
+        String filePath = scanner.nextLine();
+        System.out.println("Checking file existence :");
         
-        String result = app.getMD5ForFile("C://bps-logs//bps.log");
+        File file = new File(filePath+File.separator+fileName);
+        boolean existFlag = file.exists();
+        System.out.println(existFlag);
+        if(existFlag)
+        {
+        	 System.out.println("MD5 for given file is: ");
+        	 Injector injector = Guice.createInjector(new FileUtilInjector()); 
+     		 FileUtilService app = injector.getInstance(FileUtilService.class);
+             
+             String result = app.getMD5ForFile(filePath+File.separator+fileName);
+             System.out.println(result);
+             
+             System.out.println("Uplodaing file into SFTP embedded server: ");
+             Injector epinjector = Guice.createInjector(new EndpointInjector()); 
+             EndointService epapp = epinjector.getInstance(EndointService.class);
+             boolean result1 = epapp.uploadFiletoServer(filePath,fileName);
+             
+             if(result1)
+             {
+            	  System.out.println("File Uploaded ");
+            	  System.out.println("Comparing MD5 : ");
+            	  
+            	  //check REST service 
+            	  String md5Server = RestClient.VerifyMD5(fileName);
+            	  if(md5Server.equals(result))
+                  {
+                 	 System.out.println("Matched");
+                  }else{
+                 	 System.out.println("Not Matched");
+                  }
+             }else{
+            	 System.out.println("Something went wrong please check server connection details");
+             }
+            
+                      
+        }
         
-        System.out.println("result =====>"+result);
+       
+       
         
-        Injector epinjector = Guice.createInjector(new EndpointInjector()); 
-        EndointService epapp = epinjector.getInstance(EndointService.class);
-        boolean result1 = epapp.uploadFiletoServer();
         
-        System.out.println("result1 =====>"+result1);
+		
+       
         
-        //check REST service 
-         String md5Server = RestClient.VerifyMD5("bps.log");
-
-         System.out.println("md5Server =====>"+md5Server);
-         if(md5Server.equals(result))
-         {
-        	 System.out.println("*****Both are same*****");
-         }else{
-        	 System.out.println("*****Both are wrong*****");
-         }
+       
         
 	}
 
